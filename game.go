@@ -6,44 +6,50 @@ import (
 )
 
 type Game struct {
-	players             []Player
+	players             []*Player
 	Suits               [4]string
 	CardNumbers         [13]uint
 	Cards               [4*13 + 2]Card
 	CommunityCards      [5]Card
+	BetAmount           uint
+	Pot                 uint
 	cardPointer         uint
 	dealerIndex         uint
+	playerIndex         uint
 	currentBettingRound uint
 }
 
 func NewGame(n int) *Game {
-	players := make([]Player, n)
+	players := make([]*Player, n)
 	for i := 0; i < n; i++ {
-		players[i] = Player{Num: uint(i), Chip: 100}
+		players[i] = &Player{Num: uint(i), Chip: 100}
 	}
-	return &Game{
+	g := &Game{
 		players:        players,
 		Suits:          [4]string{"Spade", "Diamond", "Club", "Heart"},
 		CardNumbers:    [13]uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13},
 		Cards:          [4*13 + 2]Card{},
 		CommunityCards: [5]Card{},
+		BetAmount:      10,
 	}
+	for i := 0; i < n; i++ {
+		players[i].game = g
+	}
+	return g
 }
 
 func (g *Game) ChooseFirstDealer() {
 	g.dealerIndex = uint(rand.Intn(len(g.players)))
+	g.playerIndex = g.dealerIndex
 }
 
 func (g *Game) ChooseNextDealer() {
 	g.dealerIndex = (g.dealerIndex + 1) % uint(len(g.players))
 }
 
-func (g *Game) CurrentDealer() Player {
+func (g *Game) CurrentDealer() *Player {
 	return g.players[g.dealerIndex]
 }
-
-//func (g *Game) NextPlayer() (p *Player) {
-//}
 
 func (g *Game) ShuffleCards() {
 	// initialize cards
@@ -76,7 +82,28 @@ func (g *Game) DealCards() {
 	}
 }
 
+func (g *Game) BigBlindAmount() uint {
+	return g.BetAmount
+}
+
+func (g *Game) SmallBlindAmount() uint {
+	return g.BetAmount / 2
+}
+
+func (g *Game) NextPlayer() *Player {
+	g.playerIndex = (g.playerIndex + 1) % uint(len(g.players))
+	return g.players[g.playerIndex]
+}
+
+func (g *Game) CurrentPlayer() *Player {
+	return g.players[g.playerIndex]
+}
+
 func (g *Game) BlindBets() {
+	p := g.NextPlayer()
+	p.Bet(g.SmallBlindAmount())
+	p = g.NextPlayer()
+	p.Bet(g.BigBlindAmount())
 }
 
 func (g *Game) Start() bool {
@@ -91,6 +118,9 @@ func (g *Game) Start() bool {
 	fmt.Println("cards:", g.Cards)
 	for i := 0; i < len(g.players); i++ {
 		fmt.Println("player cards:", i, g.players[i].Cards)
+	}
+	for i := 0; i < len(g.players); i++ {
+		fmt.Println("player bet:", i, g.players[i].BetAmount)
 	}
 
 	//for {
