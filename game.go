@@ -5,10 +5,11 @@ import (
 	"math/rand"
 )
 
+var Suits = [4]string{"Spade", "Diamond", "Club", "Heart"}
+var CardNumbers = [13]uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}
+
 type Game struct {
 	players             []*Player
-	Suits               [4]string
-	CardNumbers         [13]uint
 	Cards               [4*13 + 2]Card
 	CommunityCards      [5]Card
 	BetAmount           uint
@@ -26,8 +27,6 @@ func NewGame(n int) *Game {
 	}
 	g := &Game{
 		players:        players,
-		Suits:          [4]string{"Spade", "Diamond", "Club", "Heart"},
-		CardNumbers:    [13]uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13},
 		Cards:          [4*13 + 2]Card{},
 		CommunityCards: [5]Card{},
 		BetAmount:      10,
@@ -54,9 +53,9 @@ func (g *Game) CurrentDealer() *Player {
 func (g *Game) ShuffleCards() {
 	// initialize cards
 	cards := [4*13 + 2]Card{}
-	for i := 0; i < len(g.Suits); i++ {
-		for j := 0; j < len(g.CardNumbers); j++ {
-			cards[i*13+j] = Card{Suit: g.Suits[i], Number: g.CardNumbers[j]}
+	for i := 0; i < len(Suits); i++ {
+		for j := 0; j < len(CardNumbers); j++ {
+			cards[i*13+j] = Card{Suit: Suits[i], Number: CardNumbers[j]}
 		}
 	}
 	cards[52] = Card{Suit: "Joker"}
@@ -114,14 +113,15 @@ func (g *Game) Start() bool {
 
 	// テスト出力
 	dealer := g.CurrentDealer()
+	//fmt.Println("cards:", g.Cards)
 	fmt.Println("current dealer:", dealer.Num)
-	fmt.Println("cards:", g.Cards)
 	for i := 0; i < len(g.players); i++ {
 		fmt.Println("player cards:", i, g.players[i].Cards)
 	}
 	for i := 0; i < len(g.players); i++ {
 		fmt.Println("player bet:", i, g.players[i].BetAmount)
 	}
+	fmt.Println("current player:", g.CurrentPlayer().Num)
 
 	//for {
 	//	for {
