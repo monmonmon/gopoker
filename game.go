@@ -123,9 +123,12 @@ func (g *Game) Start() bool {
 	}
 	fmt.Println("current player:", g.CurrentPlayer().Num)
 
+	player := g.NextPlayer()
+	player.Action()
+
 	//for {
 	//	for {
-	//		player = g.NextPlayer()
+	//		player := g.NextPlayer()
 	//		player.Action()
 	//		if g.BettingRoundFinished() {
 	//			break

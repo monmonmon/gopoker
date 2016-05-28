@@ -8,24 +8,6 @@ import (
 	"time"
 )
 
-type Player struct {
-	Num       uint
-	Cards     [2]Card
-	Chip      uint
-	BetAmount uint
-	game      *Game
-}
-
-func (p *Player) Bet(amount uint) (ok bool) {
-	if p.Chip > amount {
-		p.Chip -= amount
-		p.BetAmount += amount
-		return true
-	} else {
-		return false
-	}
-}
-
 type Card struct {
 	Suit   string
 	Number uint
