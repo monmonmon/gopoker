@@ -8,17 +8,53 @@ import (
 	"strings"
 )
 
+const (
+	CheckOrCall = iota + 1
+	Raise
+	Fold
+)
+
 type Player struct {
-	Num       uint
-	Cards     [2]Card
-	Chip      uint
-	BetAmount uint
-	game      *Game
+	Num        uint
+	Cards      [2]Card
+	ChipAmount uint
+	BetAmount  uint
+	game       *Game
+	folded     bool
+}
+
+func (p *Player) AskForNumber(prompt string) int {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Printf("[Player %d] %s: ", p.Num, prompt)
+		text, _ := reader.ReadString('\n')
+		if num, err := strconv.Atoi(strings.Trim(text, "\n")); err == nil {
+			return num
+		}
+		if len(text) == 0 {
+			fmt.Println()
+		}
+	}
+}
+
+func (p *Player) AskForYesOrNo(prompt string) bool {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Printf("[Player %d] %s (y/N): ", p.Num, prompt)
+		text, _ := reader.ReadString('\n')
+		text = strings.Trim(text, "\n")
+		switch text {
+		case "y", "Y":
+			return true
+		case "n", "N", "":
+			return false
+		}
+	}
 }
 
 func (p *Player) Bet(amount uint) (ok bool) {
-	if p.Chip > amount {
-		p.Chip -= amount
+	if p.ChipAmount > amount {
+		p.ChipAmount -= amount
 		p.BetAmount += amount
 		return true
 	} else {
@@ -26,27 +62,86 @@ func (p *Player) Bet(amount uint) (ok bool) {
 	}
 }
 
+func (p *Player) CallAmount() uint {
+	return p.game.CurrentBetAmountPerPerson() - p.BetAmount
+}
+
+func (p *Player) CanCheck() bool {
+	return p.CallAmount() == 0
+}
+
 func (p *Player) Action() bool {
-	reader := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Printf("[Player %d] 1. Check 2. Raise 3. Fold: ")
-		text, _ := reader.ReadString('\n')
-		num, err := strconv.Atoi(strings.Trim(text, "\n"))
-		fmt.Println(">>", num)
-		if err != nil {
-			continue
+		prompt := "1:Call, 2:Raise, 3:Fold"
+		if p.CanCheck() {
+			prompt = "1:Check, 2:Raise, 3:Fold"
 		}
+		num := p.AskForNumber(prompt)
+		ok := false
 		switch num {
-		case 1:
-			fmt.Println("Check")
-		case 2:
-			fmt.Println("Raise")
-		case 3:
-			fmt.Println("Fold")
+		case CheckOrCall:
+			if p.CanCheck() {
+				ok = p.Check()
+			} else if p.CallAmount() > 0 {
+				ok = p.Call()
+			} else {
+				panic("hoe-")
+			}
+		case Raise:
+			ok = p.Raise()
+		case Fold:
+			ok = p.Fold()
 		default:
-			continue
+			ok = false
 		}
-		break
+		if ok {
+			break
+		}
 	}
+	return true
+}
+
+func (p *Player) Check() (ok bool) {
+	fmt.Println("Check")
+	if p.CanCheck() {
+		return true
+	} else {
+		panic("hoe-")
+	}
+}
+
+func (p *Player) Call() (ok bool) {
+	fmt.Println("Call")
+	betAmount := p.CallAmount()
+	if betAmount > 0 {
+		prompt := fmt.Sprintf("Bet %d chips more to call?", betAmount)
+		if p.AskForYesOrNo(prompt) {
+			p.Bet(betAmount)
+			return true
+		} else {
+			return false
+		}
+	} else {
+		panic("hoe-")
+	}
+}
+
+func (p *Player) Raise() (ok bool) {
+	fmt.Println("Raise")
+	amount := p.AskForNumber("Raise amount?")
+	if amount <= 0 || p.ChipAmount < uint(amount) {
+		return false
+	} else {
+		if ok := p.Bet(uint(amount)); ok {
+			return true
+		} else {
+			return false
+		}
+	}
+}
+
+func (p *Player) Fold() (ok bool) {
+	fmt.Println("Fold")
+	p.folded = true
 	return true
 }

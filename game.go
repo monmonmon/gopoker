@@ -23,7 +23,7 @@ type Game struct {
 func NewGame(n int) *Game {
 	players := make([]*Player, n)
 	for i := 0; i < n; i++ {
-		players[i] = &Player{Num: uint(i), Chip: 100}
+		players[i] = &Player{Num: uint(i), ChipAmount: 100}
 	}
 	g := &Game{
 		players:        players,
@@ -89,9 +89,15 @@ func (g *Game) SmallBlindAmount() uint {
 	return g.BetAmount / 2
 }
 
-func (g *Game) NextPlayer() *Player {
-	g.playerIndex = (g.playerIndex + 1) % uint(len(g.players))
-	return g.players[g.playerIndex]
+func (g *Game) NextPlayer() (p *Player) {
+	for i := 0; i < len(g.players); i++ {
+		g.playerIndex = (g.playerIndex + 1) % uint(len(g.players))
+		p = g.players[g.playerIndex]
+		if !p.folded && p.ChipAmount > 0 {
+			return
+		}
+	}
+	return nil
 }
 
 func (g *Game) CurrentPlayer() *Player {
@@ -105,6 +111,17 @@ func (g *Game) BlindBets() {
 	p.Bet(g.BigBlindAmount())
 }
 
+func (g *Game) CurrentBetAmountPerPerson() uint {
+	max := uint(0)
+	for i := 0; i < len(g.players); i++ {
+		player := g.players[i]
+		if max < player.BetAmount {
+			max = player.BetAmount
+		}
+	}
+	return max
+}
+
 func (g *Game) Start() bool {
 	g.ChooseFirstDealer()
 	g.ShuffleCards()
@@ -113,7 +130,7 @@ func (g *Game) Start() bool {
 
 	// テスト出力
 	dealer := g.CurrentDealer()
-	//fmt.Println("cards:", g.Cards)
+	fmt.Println("cards:", g.Cards)
 	fmt.Println("current dealer:", dealer.Num)
 	for i := 0; i < len(g.players); i++ {
 		fmt.Println("player cards:", i, g.players[i].Cards)
@@ -127,6 +144,7 @@ func (g *Game) Start() bool {
 	player.Action()
 
 	//for {
+	//	// Betting Round
 	//	for {
 	//		player := g.NextPlayer()
 	//		player.Action()
