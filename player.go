@@ -15,12 +15,24 @@ const (
 )
 
 type Player struct {
-	Num        uint
-	Cards      [2]Card
-	ChipAmount uint
-	BetAmount  uint
-	game       *Game
-	folded     bool
+	Num         uint
+	Cards       [2]Card
+	ChipAmount  uint
+	BetAmount   uint
+	game        *Game
+	folded      bool
+	playedRound bool
+}
+
+type Players []*Player
+
+func (pp Players) Playing() (ret Players) {
+	for _, p := range pp {
+		if !p.folded && p.ChipAmount > 0 {
+			ret = append(ret, p)
+		}
+	}
+	return
 }
 
 func (p *Player) AskForNumber(prompt string) int {
@@ -70,7 +82,7 @@ func (p *Player) CanCheck() bool {
 	return p.CallAmount() == 0
 }
 
-func (p *Player) Action() bool {
+func (p *Player) Action() {
 	for {
 		prompt := "1:Call, 2:Raise, 3:Fold"
 		if p.CanCheck() {
@@ -98,7 +110,7 @@ func (p *Player) Action() bool {
 			break
 		}
 	}
-	return true
+	p.playedRound = true
 }
 
 func (p *Player) Check() (ok bool) {

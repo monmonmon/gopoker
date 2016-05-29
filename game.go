@@ -1,17 +1,20 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"math/rand"
+	"os"
+	"time"
 )
 
 var Suits = [4]string{"Spade", "Diamond", "Club", "Heart"}
 var CardNumbers = [13]uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}
 
 type Game struct {
-	players             []*Player
+	Players             Players
 	Cards               [4*13 + 2]Card
-	CommunityCards      [5]Card
+	CommunityCards      []Card
 	BetAmount           uint
 	Pot                 uint
 	cardPointer         uint
@@ -26,10 +29,9 @@ func NewGame(n int) *Game {
 		players[i] = &Player{Num: uint(i), ChipAmount: 100}
 	}
 	g := &Game{
-		players:        players,
-		Cards:          [4*13 + 2]Card{},
-		CommunityCards: [5]Card{},
-		BetAmount:      10,
+		Players:   players,
+		Cards:     [4*13 + 2]Card{},
+		BetAmount: 10,
 	}
 	for i := 0; i < n; i++ {
 		players[i].game = g
@@ -38,24 +40,24 @@ func NewGame(n int) *Game {
 }
 
 func (g *Game) ChooseFirstDealer() {
-	g.dealerIndex = uint(rand.Intn(len(g.players)))
+	g.dealerIndex = uint(rand.Intn(len(g.Players)))
 	g.playerIndex = g.dealerIndex
 }
 
 func (g *Game) ChooseNextDealer() {
-	g.dealerIndex = (g.dealerIndex + 1) % uint(len(g.players))
+	g.dealerIndex = (g.dealerIndex + 1) % uint(len(g.Players))
 }
 
 func (g *Game) CurrentDealer() *Player {
-	return g.players[g.dealerIndex]
+	return g.Players[g.dealerIndex]
 }
 
 func (g *Game) ShuffleCards() {
 	// initialize cards
 	cards := [4*13 + 2]Card{}
-	for i := 0; i < len(Suits); i++ {
-		for j := 0; j < len(CardNumbers); j++ {
-			cards[i*13+j] = Card{Suit: Suits[i], Number: CardNumbers[j]}
+	for i, suit := range Suits {
+		for j, num := range CardNumbers {
+			cards[i*13+j] = Card{Suit: suit, Number: num}
 		}
 	}
 	cards[52] = Card{Suit: "Joker"}
@@ -75,9 +77,9 @@ func (g *Game) NextCard() (c Card) {
 }
 
 func (g *Game) DealCards() {
-	num := len(g.players)
+	num := len(g.Players)
 	for i := 0; i < num*2; i++ {
-		g.players[i%num].Cards[i/num] = g.NextCard()
+		g.Players[i%num].Cards[i/num] = g.NextCard()
 	}
 }
 
@@ -90,9 +92,9 @@ func (g *Game) SmallBlindAmount() uint {
 }
 
 func (g *Game) NextPlayer() (p *Player) {
-	for i := 0; i < len(g.players); i++ {
-		g.playerIndex = (g.playerIndex + 1) % uint(len(g.players))
-		p = g.players[g.playerIndex]
+	for _, _ = range g.Players {
+		g.playerIndex = (g.playerIndex + 1) % uint(len(g.Players))
+		p = g.Players[g.playerIndex]
 		if !p.folded && p.ChipAmount > 0 {
 			return
 		}
@@ -101,7 +103,7 @@ func (g *Game) NextPlayer() (p *Player) {
 }
 
 func (g *Game) CurrentPlayer() *Player {
-	return g.players[g.playerIndex]
+	return g.Players[g.playerIndex]
 }
 
 func (g *Game) BlindBets() {
@@ -113,13 +115,88 @@ func (g *Game) BlindBets() {
 
 func (g *Game) CurrentBetAmountPerPerson() uint {
 	max := uint(0)
-	for i := 0; i < len(g.players); i++ {
-		player := g.players[i]
-		if max < player.BetAmount {
-			max = player.BetAmount
+	for _, p := range g.Players {
+		if max < p.BetAmount {
+			max = p.BetAmount
 		}
 	}
 	return max
+}
+
+func (g *Game) BettingRoundFinished() (yes bool) {
+	amount := g.Players.Playing()[0].BetAmount
+	for _, p := range g.Players.Playing() {
+		if !p.playedRound || p.BetAmount != amount {
+			return false
+		}
+	}
+	return true
+}
+
+func (g *Game) NextBettingRound() bool {
+	if g.currentBettingRound >= 3 {
+		return false
+	} else {
+		g.currentBettingRound += 1
+		g.MoveChipsToPot()
+		g.DealCommunityCards()
+		g.playerIndex = g.dealerIndex
+		for _, p := range g.Players {
+			p.playedRound = false
+		}
+		g.PrintStatus()
+		return true
+	}
+}
+
+func (g *Game) DealCommunityCards() {
+	n := 0
+	switch g.currentBettingRound {
+	case 1:
+		n = 3
+	case 2, 3:
+		n = 1
+	default:
+		panic("hoe-")
+	}
+	for i := 0; i < n; i++ {
+		g.CommunityCards = append(g.CommunityCards, g.NextCard())
+	}
+}
+
+func (g *Game) MoveChipsToPot() {
+	for _, p := range g.Players {
+		g.Pot += p.BetAmount
+		p.BetAmount = 0
+	}
+}
+
+func (g *Game) CurrentBettingRound() string {
+	switch g.currentBettingRound {
+	case 0:
+		return "1st Betting Round"
+	case 1:
+		return "2nd Betting Round"
+	case 2:
+		return "3rd Betting Round"
+	case 3:
+		return "4th Betting Round"
+	default:
+		panic("hoe-")
+	}
+}
+
+func (g *Game) PrintStatus() {
+	fmt.Println(g.CurrentBettingRound())
+	fmt.Println("Community Cards:", g.CommunityCards)
+	fmt.Println("Pot:", g.Pot)
+	for _, p := range g.Players {
+		fmt.Printf("Player %d: %d Bets / %d Chips", p.Num, p.BetAmount, p.ChipAmount)
+		if p.folded {
+			fmt.Print(" (folded)")
+		}
+		fmt.Println()
+	}
 }
 
 func (g *Game) Start() bool {
@@ -132,32 +209,50 @@ func (g *Game) Start() bool {
 	dealer := g.CurrentDealer()
 	fmt.Println("cards:", g.Cards)
 	fmt.Println("current dealer:", dealer.Num)
-	for i := 0; i < len(g.players); i++ {
-		fmt.Println("player cards:", i, g.players[i].Cards)
+	for _, p := range g.Players.Playing() {
+		fmt.Println("player cards:", p.Num, p.Cards)
 	}
-	for i := 0; i < len(g.players); i++ {
-		fmt.Println("player bet:", i, g.players[i].BetAmount)
+	for _, p := range g.Players.Playing() {
+		fmt.Println("player bet:", p.Num, p.BetAmount)
 	}
-	fmt.Println("current player:", g.CurrentPlayer().Num)
 
 	player := g.NextPlayer()
 	player.Action()
 
-	//for {
-	//	// Betting Round
-	//	for {
-	//		player := g.NextPlayer()
-	//		player.Action()
-	//		if g.BettingRoundFinished() {
-	//			break
-	//		}
-	//	}
-	//	if !g.NextBettingRound() {
-	//		break
-	//	}
-	//}
+	for {
+		// Betting Round
+		for {
+			player := g.NextPlayer()
+			player.Action()
+			if g.BettingRoundFinished() {
+				break
+			}
+		}
+		if !g.NextBettingRound() {
+			break
+		}
+	}
 
 	//g.Showdown()
 
 	return false
+}
+
+func main() {
+	numPlayers := flag.Int("n", 0, "Number of players (2 or bigger)")
+	flag.Parse()
+	rand.Seed(time.Now().UnixNano())
+
+	if *numPlayers < 2 {
+		fmt.Println("Too small number of players")
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+
+	game := NewGame(*numPlayers)
+	for {
+		if cont := game.Start(); !cont {
+			break
+		}
+	}
 }
