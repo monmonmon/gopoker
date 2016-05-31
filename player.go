@@ -35,17 +35,17 @@ func (pp Players) Playing() (ret Players) {
 	return
 }
 
-func (p *Player) AskForNumber(prompt string) int {
+func (p *Player) AskForNumber(prompt string) (ret int, ok bool) {
 	reader := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Printf("[Player %d] %s: ", p.Num, prompt)
-		text, _ := reader.ReadString('\n')
-		if num, err := strconv.Atoi(strings.Trim(text, "\n")); err == nil {
-			return num
-		}
-		if len(text) == 0 {
-			fmt.Println()
-		}
+	fmt.Printf("[Player %d] %s: ", p.Num, prompt)
+	text, _ := reader.ReadString('\n')
+	if len(text) == 0 {
+		fmt.Println()
+	}
+	if num, err := strconv.Atoi(strings.Trim(text, "\n")); err == nil {
+		return num, true
+	} else {
+		return 0, false
 	}
 }
 
@@ -78,18 +78,31 @@ func (p *Player) CallAmount() uint {
 	return p.game.CurrentBetAmountPerPerson() - p.BetAmount
 }
 
+func (p *Player) MinRaiseAmount() (ret uint) {
+	ret = p.game.CurrentBetAmountPerPerson() - p.BetAmount
+	if ret < 0 {
+		ret = 0
+	}
+	return
+}
+
 func (p *Player) CanCheck() bool {
 	return p.CallAmount() == 0
 }
 
 func (p *Player) Action() {
 	for {
-		prompt := "1:Call, 2:Raise, 3:Fold"
+		var prompt string
 		if p.CanCheck() {
 			prompt = "1:Check, 2:Raise, 3:Fold"
+		} else {
+			prompt = "1:Call, 2:Raise, 3:Fold"
 		}
-		num := p.AskForNumber(prompt)
-		ok := false
+		num, ok := p.AskForNumber(prompt)
+		if !ok {
+			continue
+		}
+		ok = false
 		switch num {
 		case CheckOrCall:
 			if p.CanCheck() {
@@ -126,13 +139,7 @@ func (p *Player) Call() (ok bool) {
 	fmt.Println("Call")
 	betAmount := p.CallAmount()
 	if betAmount > 0 {
-		prompt := fmt.Sprintf("Bet %d chips more to call?", betAmount)
-		if p.AskForYesOrNo(prompt) {
-			p.Bet(betAmount)
-			return true
-		} else {
-			return false
-		}
+		return p.Bet(betAmount)
 	} else {
 		panic("hoe-")
 	}
@@ -140,8 +147,9 @@ func (p *Player) Call() (ok bool) {
 
 func (p *Player) Raise() (ok bool) {
 	fmt.Println("Raise")
-	amount := p.AskForNumber("Raise amount?")
-	if amount <= 0 || p.ChipAmount < uint(amount) {
+	minAmount := p.MinRaiseAmount()
+	amount, ok := p.AskForNumber("Raise amount?")
+	if !ok || uint(amount) <= minAmount || p.ChipAmount < uint(amount) {
 		return false
 	} else {
 		if ok := p.Bet(uint(amount)); ok {

@@ -205,16 +205,16 @@ func (g *Game) Start() bool {
 	g.DealCards()
 	g.BlindBets()
 
-	// テスト出力
-	dealer := g.CurrentDealer()
-	fmt.Println("cards:", g.Cards)
-	fmt.Println("current dealer:", dealer.Num)
-	for _, p := range g.Players.Playing() {
-		fmt.Println("player cards:", p.Num, p.Cards)
-	}
-	for _, p := range g.Players.Playing() {
-		fmt.Println("player bet:", p.Num, p.BetAmount)
-	}
+	//// テスト出力
+	//dealer := g.CurrentDealer()
+	//fmt.Println("cards:", g.Cards)
+	//fmt.Println("current dealer:", dealer.Num)
+	//for _, p := range g.Players.Playing() {
+	//	fmt.Println("player cards:", p.Num, p.Cards)
+	//}
+	//for _, p := range g.Players.Playing() {
+	//	fmt.Println("player bet:", p.Num, p.BetAmount)
+	//}
 
 	player := g.NextPlayer()
 	player.Action()
