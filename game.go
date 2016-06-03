@@ -1,11 +1,8 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"math/rand"
-	"os"
-	"time"
 )
 
 var Suits = [4]string{"Spade", "Diamond", "Club", "Heart"}
@@ -236,23 +233,4 @@ func (g *Game) Start() bool {
 	//g.Showdown()
 
 	return false
-}
-
-func main() {
-	numPlayers := flag.Int("n", 0, "Number of players (2 or bigger)")
-	flag.Parse()
-	rand.Seed(time.Now().UnixNano())
-
-	if *numPlayers < 2 {
-		fmt.Println("Too small number of players")
-		flag.PrintDefaults()
-		os.Exit(1)
-	}
-
-	game := NewGame(*numPlayers)
-	for {
-		if cont := game.Start(); !cont {
-			break
-		}
-	}
 }
