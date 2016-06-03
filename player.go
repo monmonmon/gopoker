@@ -24,17 +24,6 @@ type Player struct {
 	playedRound bool
 }
 
-type Players []*Player
-
-func (pp Players) Playing() (ret Players) {
-	for _, p := range pp {
-		if !p.folded && p.ChipAmount > 0 {
-			ret = append(ret, p)
-		}
-	}
-	return
-}
-
 func (p *Player) AskForNumber(prompt string) (ret int, ok bool) {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Printf("[Player %d] %s: ", p.Num, prompt)
