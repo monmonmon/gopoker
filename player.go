@@ -2,10 +2,11 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/fatih/color"
 )
 
 const (
@@ -13,6 +14,16 @@ const (
 	Raise
 	Fold
 )
+
+var playerColors []color.Attribute = []color.Attribute{
+	color.FgRed,
+	color.FgGreen,
+	color.FgYellow,
+	color.FgBlue,
+	color.FgMagenta,
+	color.FgCyan,
+	color.FgBlack,
+}
 
 type Player struct {
 	Num         uint
@@ -22,14 +33,21 @@ type Player struct {
 	game        *Game
 	folded      bool
 	playedRound bool
+	w           *color.Color
+}
+
+func NewPlayer(num int, chip int) *Player {
+	c := playerColors[num%len(playerColors)]
+	w := color.New(c)
+	return &Player{Num: uint(num), ChipAmount: uint(chip), w: w}
 }
 
 func (p *Player) AskForNumber(prompt string) (ret int, ok bool) {
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Printf("[Player %d] %s: ", p.Num, prompt)
+	p.w.Printf("[Player %d] %s: ", p.Num, prompt)
 	text, _ := reader.ReadString('\n')
 	if len(text) == 0 {
-		fmt.Println()
+		p.w.Println()
 	}
 	if num, err := strconv.Atoi(strings.Trim(text, "\n")); err == nil {
 		return num, true
@@ -41,7 +59,7 @@ func (p *Player) AskForNumber(prompt string) (ret int, ok bool) {
 func (p *Player) AskForYesOrNo(prompt string) bool {
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Printf("[Player %d] %s (y/N): ", p.Num, prompt)
+		p.w.Printf("[Player %d] %s (y/N): ", p.Num, prompt)
 		text, _ := reader.ReadString('\n')
 		text = strings.Trim(text, "\n")
 		switch text {
@@ -116,7 +134,7 @@ func (p *Player) Action() {
 }
 
 func (p *Player) Check() (ok bool) {
-	fmt.Println("Check")
+	p.w.Println("Check")
 	if p.CanCheck() {
 		return true
 	} else {
@@ -125,7 +143,7 @@ func (p *Player) Check() (ok bool) {
 }
 
 func (p *Player) Call() (ok bool) {
-	fmt.Println("Call")
+	p.w.Println("Call")
 	betAmount := p.CallAmount()
 	if betAmount > 0 {
 		return p.Bet(betAmount)
@@ -135,7 +153,7 @@ func (p *Player) Call() (ok bool) {
 }
 
 func (p *Player) Raise() (ok bool) {
-	fmt.Println("Raise")
+	p.w.Println("Raise")
 	minAmount := p.MinRaiseAmount()
 	amount, ok := p.AskForNumber("Raise amount?")
 	if !ok || uint(amount) <= minAmount || p.ChipAmount < uint(amount) {
@@ -150,7 +168,7 @@ func (p *Player) Raise() (ok bool) {
 }
 
 func (p *Player) Fold() (ok bool) {
-	fmt.Println("Fold")
+	p.w.Println("Fold")
 	p.folded = true
 	return true
 }

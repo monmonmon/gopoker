@@ -23,7 +23,7 @@ type Game struct {
 func NewGame(n int) *Game {
 	players := make([]*Player, n)
 	for i := 0; i < n; i++ {
-		players[i] = &Player{Num: uint(i), ChipAmount: 100}
+		players[i] = NewPlayer(i, 100)
 	}
 	g := &Game{
 		Players:   players,
