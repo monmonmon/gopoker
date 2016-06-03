@@ -39,6 +39,7 @@ func NewGame(n int) *Game {
 func (g *Game) ChooseFirstDealer() {
 	g.dealerIndex = uint(rand.Intn(len(g.Players)))
 	g.playerIndex = g.dealerIndex
+	fmt.Printf("Dealer: Player %d\n", g.dealerIndex)
 }
 
 func (g *Game) ChooseNextDealer() {
@@ -106,8 +107,10 @@ func (g *Game) CurrentPlayer() *Player {
 func (g *Game) BlindBets() {
 	p := g.NextPlayer()
 	p.Bet(g.SmallBlindAmount())
+	fmt.Printf("Player %d bet Small Blind (%d)\n", p.Num, g.SmallBlindAmount())
 	p = g.NextPlayer()
 	p.Bet(g.BigBlindAmount())
+	fmt.Printf("Player %d bet Big Blind (%d)\n", p.Num, g.BigBlindAmount())
 }
 
 func (g *Game) CurrentBetAmountPerPerson() uint {
@@ -141,7 +144,6 @@ func (g *Game) NextBettingRound() bool {
 		for _, p := range g.Players {
 			p.playedRound = false
 		}
-		g.PrintStatus()
 		return true
 	}
 }
@@ -184,19 +186,25 @@ func (g *Game) CurrentBettingRound() string {
 }
 
 func (g *Game) PrintStatus() {
-	fmt.Println(g.CurrentBettingRound())
+	fmt.Println("")
+	fmt.Println("**", g.CurrentBettingRound(), "**")
 	fmt.Println("Community Cards:", g.CommunityCards)
 	fmt.Println("Pot:", g.Pot)
 	for _, p := range g.Players {
 		fmt.Printf("Player %d: %d Bets / %d Chips", p.Num, p.BetAmount, p.ChipAmount)
+		if p.Num == g.dealerIndex {
+			fmt.Print(" <- Dealer")
+		}
 		if p.folded {
 			fmt.Print(" (folded)")
 		}
 		fmt.Println()
 	}
+	fmt.Println("")
 }
 
 func (g *Game) Start() bool {
+	fmt.Println("Number of Players:", len(g.Players))
 	g.ChooseFirstDealer()
 	g.ShuffleCards()
 	g.DealCards()
@@ -213,11 +221,9 @@ func (g *Game) Start() bool {
 	//	fmt.Println("player bet:", p.Num, p.BetAmount)
 	//}
 
-	player := g.NextPlayer()
-	player.Action()
-
 	for {
 		// Betting Round
+		g.PrintStatus()
 		for {
 			player := g.NextPlayer()
 			player.Action()
@@ -226,6 +232,7 @@ func (g *Game) Start() bool {
 			}
 		}
 		if !g.NextBettingRound() {
+			g.PrintStatus()
 			break
 		}
 	}
